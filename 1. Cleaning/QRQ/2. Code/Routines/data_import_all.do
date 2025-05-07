@@ -431,6 +431,6 @@ replace country="Venezuela, RB" if country=="Venezuela"
 replace country="Czechia" if country=="Czech Republic"
 replace country="Turkiye" if country=="Turkey"
 
-save "${path2data}/1. Original/ph_final.dta", replace
-erase "${path2data}/1. Original/ph_final_long.dta"
+save "${path2data}//1. Original//ph_final.dta", replace
+erase "${path2data}//1. Original//ph_final_long.dta"
 

@@ -47,7 +47,7 @@ if (inlist("`c(username)'", "nrodriguez")) {
 global path2data "${path2SP}\1. Data"
 
 *Path 2dos: Path to do-files (Routines). This will include the importing routine for 2023 ONLY
-global path2dos23  "${path2GH}\2. Code"
+global path2dos23 "${path2GH}\2. Code"
 
 *Path 2dos: Path to do-files (Routines). THESE ARE THE SAME ROUTINES AS 2024
 global path2dos  "C:\Users\nrodriguez\OneDrive - World Justice Project\Natalia\GitHub\ROLI_2024\1. Cleaning\QRQ\2. Code"
@@ -56,7 +56,7 @@ global path2dos  "C:\Users\nrodriguez\OneDrive - World Justice Project\Natalia\G
 					I. Cleaning the data
 =================================================================================================================*/
 cls
-do "${path2dos23}/Routines/data_import_all.do"
+do "${path2dos23}\Routines\data_import_all.do"
 
 /*=================================================================================================================
 					II. Appending the data
