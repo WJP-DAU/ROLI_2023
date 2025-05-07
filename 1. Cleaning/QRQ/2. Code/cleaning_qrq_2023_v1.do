@@ -28,67 +28,35 @@ set maxvar 120000
 *--- Required packages:
 * NONE
 
+*--- Years of analysis
+
+global year_current "2023"
+global year_previous "2022"
+
 *--- Defining paths to SharePoint & your local Git Repo copy:
 
 *------ (a) Natalia Rodriguez:
 if (inlist("`c(username)'", "nrodriguez")) {
-	global path2SP "C:\Users\nrodriguez\OneDrive - World Justice Project\Programmatic\Data Analytics\7. WJP ROLI\ROLI_2023\1. Cleaning\QRQ"
-	global path2GH "C:\Users\nrodriguez\OneDrive - World Justice Project\Natalia\GitHub\ROLI_2023\1. Cleaning\QRQ"
+	global path2SP "C:\Users\nrodriguez\OneDrive - World Justice Project\Programmatic\Data Analytics\7. WJP ROLI\ROLI_${year_current}\1. Cleaning\QRQ"
+	global path2GH "C:\Users\nrodriguez\OneDrive - World Justice Project\Natalia\GitHub\ROLI_${year_current}\1. Cleaning\QRQ"
 	
-	*global path2data "C:\Users\nrodriguez\OneDrive - World Justice Project\Programmatic\QRQ\QRQ 2024\Final Data\excel"
-	*global path2exp  "C:\Users\nrodriguez\OneDrive - World Justice Project\Programmatic\Index Data & Analysis\2024\QRQ"
-	*global path2dos  "C:\Users\nrodriguez\OneDrive - World Justice Project\Programmatic\QRQ do files\2024"
-}
-
 
 *--- Defining path to Data and DoFiles:
 
 *Path2data: Path to original exports from Alchemer by QRQ team. 
 global path2data "${path2SP}\1. Data"
 
-*Path2exp: Path to folder with final datasets (QRQ.dta and qrq_country_averages.dta". 
+*Path 2dos: Path to do-files (Routines). This will include the importing routine for 2023 ONLY
+global path2dos23  "${path2GH}\2. Code"
 
 *Path 2dos: Path to do-files (Routines). THESE ARE THE SAME ROUTINES AS 2024
 global path2dos  "C:\Users\nrodriguez\OneDrive - World Justice Project\Natalia\GitHub\ROLI_2024\1. Cleaning\QRQ\2. Code"
 
-
-*Years of analysis
-global year_current "2023"
-global year_previous "2022"
-
-
 /*=================================================================================================================
 					I. Cleaning the data
 =================================================================================================================*/
-
-/*-----------*/
-/* 1. Civil  */
-/*-----------*/
-
 cls
-do "${path2dos_23}/Routines/data_import_cc.do"
-
-/*--------------*/
-/* 2. Criminal  */
-/*--------------*/
-
-cls
-do "${path2dos_23}/Routines/data_import_cj.do"
-
-/*-----------*/
-/* 3. Labor  */
-/*-----------*/
-
-cls
-do "${path2dos_23}/Routines/data_import_lb.do"
-
-/*------------------*/
-/* 4. Public Health */
-/*------------------*/
-
-cls
-do "${path2dos_23}/Routines/data_import_ph.do"
-
+do "${path2dos23}/Routines/data_import_all.do"
 
 /*=================================================================================================================
 					II. Appending the data
