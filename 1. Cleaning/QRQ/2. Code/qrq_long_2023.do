@@ -19,17 +19,22 @@ cls
 =================================================================================================================*/
 
 *--- Stata Version
-version 15
+*version 15
 
 *--- Required packages:
 * NONE
+
+*--- Years of analysis
+
+global year_current "2023"
+global year_previous "2022"
 
 *--- Defining paths to SharePoint & your local Git Repo copy:
 
 *------ (a) Natalia Rodriguez:
 if (inlist("`c(username)'", "nrodriguez")) {
-	global path2SP "C:\Users\nrodriguez\OneDrive - World Justice Project\Programmatic\Data Analytics\7. WJP ROLI\ROLI_2024\1. Cleaning\QRQ"
-	global path2GH "C:\Users\nrodriguez\OneDrive - World Justice Project\Natalia\GitHub\ROLI_2024\1. Cleaning\QRQ"
+	global path2SP "C:\Users\nrodriguez\OneDrive - World Justice Project\Programmatic\Data Analytics\7. WJP ROLI\ROLI_${year_current}\1. Cleaning\QRQ"
+	global path2GH "C:\Users\nrodriguez\OneDrive - World Justice Project\Natalia\GitHub\ROLI_${year_current}\1. Cleaning\QRQ"
 }
 
 *------ (b) Alex Ponce:
@@ -40,45 +45,21 @@ else if (inlist("`c(username)'", "")) {
 
 *--- Defining path to Data and DoFiles:
 
-**Path2data: Path to original exports from Alchemer by QRQ team. 
+*Path2data: Path to original exports from Alchemer by QRQ team. 
 global path2data "${path2SP}\1. Data"
 
-**Path2exp: Path to folder with final datasets (QRQ.dta and qrq_country_averages.dta". 
+*Path 2dos: Path to do-files (Routines). This will include the importing routine for 2023 ONLY
+global path2dos23 "${path2GH}\\2. Code"
 
-**Path 2dos: Path to do-files (Routines). 
-global path2dos  "${path2GH}\2. Code"
+*Path 2dos: Path to do-files (Routines). THESE ARE THE SAME ROUTINES AS 2024
+global path2dos  "C:\Users\nrodriguez\OneDrive - World Justice Project\Natalia\GitHub\ROLI_2024\1. Cleaning\QRQ\2. Code"
 
 /*=================================================================================================================
 					I. Cleaning the data
 =================================================================================================================*/
 
-/*-----------*/
-/* 1. Civil  */
-/*-----------*/
-
 cls
-do "${path2dos}/Routines/data_import_cc_long.do"
-
-/*--------------*/
-/* 2. Criminal  */
-/*--------------*/
-
-cls
-do "${path2dos}/Routines/data_import_cj_long.do"
-
-/*-----------*/
-/* 3. Labor  */
-/*-----------*/
-
-cls
-do "${path2dos}/Routines/data_import_lb_long.do"
-
-/*------------------*/
-/* 4. Public Health */
-/*------------------*/
-
-cls
-do "${path2dos}/Routines/data_import_ph_long.do"
+do "${path2dos23}\\Routines\\data_import_all_long.do"
 
 
 /*=================================================================================================================
@@ -86,19 +67,21 @@ do "${path2dos}/Routines/data_import_ph_long.do"
 =================================================================================================================*/
 
 clear
-use "$path2data\1. Original\cc_final_long_2023.dta"
-append using "$path2data\1. Original\cj_final_long_2023.dta"
-append using "$path2data\1. Original\lb_final_long_2023.dta"
-append using "$path2data\1. Original\ph_final_long_2023.dta"
+use "$path2data\1. Original\cc_final_long_${year_previous}.dta"
+append using "$path2data\1. Original\cj_final_long_${year_previous}.dta", force
+append using "$path2data\1. Original\lb_final_long_${year_previous}.dta", force
+append using "$path2data\1. Original\ph_final_long_${year_previous}.dta", force
 
-save "$path2data\1. Original\qrq_long_2023.dta", replace
+destring WJP_password, replace
+
+save "$path2data\1. Original\qrq_long_${year_previous}.dta", replace
 
 
 /*=================================================================================================================
 					III. Re-scaling the data
 =================================================================================================================*/
 
-do "${path2dos}/Routines/normalization.do"
+do "${path2dos23}/Routines/normalization.do"
 
 
 /*=================================================================================================================
@@ -109,7 +92,7 @@ do "${path2dos}/Routines/common_q.do"
 
 sort country question id_alex
 
-save "$path2data\1. Original\qrq_long_2023.dta", replace
+save "$path2data\1. Original\qrq_long_${year_previous}.dta", replace
 
 
 /*=================================================================================================================
@@ -199,7 +182,7 @@ sort country id_alex
 
 do "${path2dos}/Routines/scores.do"
 
-save "$path2data\1. Original\qrq_long_2023.dta", replace
+save "$path2data\1. Original\qrq_long_${year_previous}.dta", replace
 
 
 /*=================================================================================================================
@@ -208,60 +191,60 @@ save "$path2data\1. Original\qrq_long_2023.dta", replace
 
 
 /* We do all the merges with the type of questionnaire too because there are some experts that responded more than one questionnaire, but one of them was removed
-When we do the merge, it wrongly keeps the questionnaire droppped from 2024, as it has not been droppped in the 2023 long
+When we do the merge, it wrongly keeps the questionnaire droppped from 2023, as it has not been droppped in the 2024 long
 */
 
-*Save loggins from 2023
+*Save loggins from 2022
 
-use "$path2data\1. Original\qrq_long_2023.dta", clear
+use "$path2data\1. Original\qrq_long_${year_previous}.dta", clear
 keep WJP_password question
 sort WJP_password
-save "$path2data\1. Original\qrq_login_long_2023.dta", replace
+save "$path2data\1. Original\qrq_login_long_${year_previous}.dta", replace
 
-/* Open this year's dataset (2024) and merge the loggings from 2023. We are keeping only the ones that matched. 
-- There could be ones that didn't match because we deleted them from the 2024 dataset (outliers) and from older years.
-- With this, we will keep the longitudinal experts from 2024 that are valid (that haven't been removed in 2024). 
-- 2023 login long has all the 2023 qrq long experts. It will be removing the regular from 2024 and from previous years */
+/* Open this year's dataset (2023) and merge the loggings from 2022. We are keeping only the ones that matched. 
+- There could be ones that didn't match because we deleted them from the 2023 dataset (outliers) and from older years.
+- With this, we will keep the longitudinal experts from 2024 that are valid (that haven't been removed in 2023). 
+- 2023 login long has all the 2022 qrq long experts. It will be removing the regular from 2023 and from previous years */
 
-use "$path2data\1. Original\qrq.dta", clear
+use "$path2data\1. Original\qrq_${year_current}.dta", clear
 sort WJP_password
-merge m:m WJP_password question using "$path2data\1. Original\qrq_login_long_2023.dta"
+merge m:m WJP_password question using "$path2data\1. Original\qrq_login_long_${year_previous}.dta"
 keep if _merge==3
 drop _merge
 
-*Check the year of the data -  it must be the latest year (2024)
+*Check the year of the data -  it must be the latest year (2023)
 tab year
 count
 
-save "$path2data\1. Original\qrq_long_2024.dta", replace
+save "$path2data\1. Original\qrq_long_${year_current}.dta", replace
 
 keep WJP_password question
 sort WJP_password
-save "$path2data\1. Original\qrq_login_long_2024.dta", replace
+save "$path2data\1. Original\qrq_login_long_${year_current}.dta", replace
 
-*Open the 2023 and merge the loggings that match from 2024.
+*Open the 2023 and merge the loggings that match from 2023.
 
-use "$path2data\1. Original\qrq_long_2023.dta", clear
+use "$path2data\1. Original\qrq_long_${year_previous}.dta", clear
 sort WJP_password
-merge m:m WJP_password question using "$path2data\1. Original\qrq_login_long_2024.dta"
+merge m:m WJP_password question using "$path2data\1. Original\qrq_login_long_${year_current}.dta"
 keep if _merge==3
 drop _merge
 
-save "$path2data\1. Original\qrq_long_2023.dta", replace
+save "$path2data\1. Original\qrq_long_${year_previous}.dta", replace
 
 count
-erase "$path2data\1. Original\qrq_login_long_2023.dta"
-erase "$path2data\1. Original\qrq_login_long_2024.dta"
+erase "$path2data\1. Original\qrq_login_long_${year_previous}.dta"
+erase "$path2data\1. Original\qrq_login_long_${year_current}.dta"
 
 /*=================================================================================================================
 					VII. Country Agerages
 =================================================================================================================*/
 
 /*-------------------------*/
-/* Country Averages (2023) */
+/* Country Averages (2022) */
 /*-------------------------*/
 
-use "$path2data\1. Original\qrq_long_2023.dta", clear
+use "$path2data\1. Original\qrq_long_${year_previous}.dta", clear
 
 foreach var of varlist cc_q1_norm- all_q105_norm {
 	bysort country: egen CO_`var'=mean(`var')
@@ -297,19 +280,19 @@ f_7 f_7_1 f_7_2 f_7_3  f_7_4 f_7_5 f_7_6 f_7_7 ///
 f_8 f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7 ///
 f_1 f_2 f_3 f_4 f_5 f_6 f_7 f_8 ROL 
 
-*Renaming 2024 scores
+*Renaming 2022 scores
 foreach v in f_1_2 f_1_3 f_1_4 f_1_5 f_1_6 f_1_7 f_2_1 f_2_2 f_2_3 f_2_4 f_3_1 f_3_2 f_3_3 f_3_4 f_4_1 f_4_2 f_4_3 f_4_4 f_4_5 f_4_6 f_4_7 f_4_8 f_5_3 f_6_1 f_6_2 f_6_3 f_6_4 f_6_5 f_7_1 f_7_2 f_7_3 f_7_4 f_7_5 f_7_6 f_7_7 f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7 f_1 f_2 f_3 f_4 f_5 f_6 f_7 f_8 ROLI {
-	rename `v' `v'_2023
+	rename `v' `v'_${year_previous}
 }
 
-save "$path2data\3. Final\qrq_long_2023_country_averages.dta", replace
+save "$path2data\3. Final\qrq_long_${year_previous}_country_averages.dta", replace
 
 
 /*-------------------------*/
-/* Country Averages (2024) */
+/* Country Averages (2023) */
 /*-------------------------*/
 
-use "$path2data\1. Original\qrq_long_2024.dta", clear
+use "$path2data\1. Original\qrq_long_${year_current}.dta", clear
 
 foreach var of varlist cc_q1_norm- all_q105_norm {
 	bysort country: egen CO_`var'=mean(`var')
@@ -348,52 +331,34 @@ f_7 f_7_1 f_7_2 f_7_3  f_7_4 f_7_5 f_7_6 f_7_7 ///
 f_8 f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7 ///
 f_1 f_2 f_3 f_4 f_5 f_6 f_7 f_8 ROL 
 
-*Renaming 2024 scores
+*Renaming 2023 scores
 foreach v in f_1_2 f_1_3 f_1_4 f_1_5 f_1_6 f_1_7 f_2_1 f_2_2 f_2_3 f_2_4 f_3_1 f_3_2 f_3_3 f_3_4 f_4_1 f_4_2 f_4_3 f_4_4 f_4_5 f_4_6 f_4_7 f_4_8 f_5_3 f_6_1 f_6_2 f_6_3 f_6_4 f_6_5 f_7_1 f_7_2 f_7_3 f_7_4 f_7_5 f_7_6 f_7_7 f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7 f_1 f_2 f_3 f_4 f_5 f_6 f_7 f_8 ROLI {
-	rename `v' `v'_2024
+	rename `v' `v'_${year_current}
 }
 
-save "$path2data\3. Final\qrq_long_2024_country_averages.dta", replace
+save "$path2data\3. Final\qrq_long_${year_current}_country_averages.dta", replace
 
 
 /*=================================================================================================================
 					VIII. Number of longitudinal questionnaires
 =================================================================================================================*/
 
-use "$path2data\1. Original\qrq_long_2023.dta", clear
-
-count
-
-gen aux1=1 if question=="cc"
-gen aux2=1 if question=="cj"
-gen aux3=1 if question=="lb"
-gen aux4=1 if question=="ph"
-
-bysort country: egen cc_total=total(aux1)
-bysort country: egen cj_total=total(aux2)
-bysort country: egen lb_total=total(aux3)
-bysort country: egen ph_total=total(aux4)
-egen tag = tag(country)
-
-sort country
-*br country cc_total cj_total lb_total ph_total if tag==1
-
 
 /*=================================================================================================================
 					IX. Changes over time (LONG)
 =================================================================================================================*/
 
-use "$path2data\3. Final\qrq_long_2024_country_averages.dta", replace
+use "$path2data\3. Final\qrq_long_${year_current}_country_averages.dta", clear
 
-*Merging 2023 scores
+*Merging 2022 scores
 
-merge 1:1 country using "$path2data\3. Final\qrq_long_2023_country_averages.dta"
+merge 1:1 country using "$path2data\3. Final\qrq_long_${year_previous}_country_averages.dta"
 drop _merge
 
 *Calculating changes over time
 foreach v in f_1_2 f_1_3 f_1_4 f_1_5 f_1_6 f_1_7 f_2_1 f_2_2 f_2_3 f_2_4 f_3_1 f_3_2 f_3_3 f_3_4 f_4_1 f_4_2 f_4_3 f_4_4 f_4_5 f_4_6 f_4_7 f_4_8 f_5_3 f_6_1 f_6_2 f_6_3 f_6_4 f_6_5 f_7_1 f_7_2 f_7_3 f_7_4 f_7_5 f_7_6 f_7_7 f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7 f_1 f_2 f_3 f_4 f_5 f_6 f_7 f_8 ROLI {
-	g double dif_`v'=(`v'_2024-`v'_2023)
-	g double growth_`v'=(`v'_2024-`v'_2023)/`v'_2023
+	g double dif_`v'=(`v'_${year_current}-`v'_${year_previous})
+	g double growth_`v'=(`v'_${year_current}-`v'_${year_previous})/`v'_${year_previous}
 }
 
 keep country dif_* growth_*
