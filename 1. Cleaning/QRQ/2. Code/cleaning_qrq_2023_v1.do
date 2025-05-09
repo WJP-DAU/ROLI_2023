@@ -319,7 +319,6 @@ bysort country question: gen N_questionnaire=_N
 br if total_n<=25
 drop if total_n<=25 & N>=20
 
-drop N N_questionnaire
 
 ********************************************************
 				 /* 4. Factor scores */
@@ -327,6 +326,18 @@ drop N N_questionnaire
 
 qui do "${path2dos}\\Routines\\scores.do"
 
+********************************************************
+		/* 5. Counts for original scenario */
+********************************************************
+
+sort country question year total_score
+
+*Counting the number of experts per discipline
+foreach x in cc cj lb ph {
+gen count_`x'=1 if question=="`x'"
+}
+
+drop N N_questionnaire
  
 ********************************************************
 				 /* 6. Outliers */
@@ -350,11 +361,16 @@ do "${path2dos}\\Routines\\globals.do"
 
 preserve
 
-collapse (mean) $norm, by(country)
+collapse (mean) $norm (sum) count_cc count_cj count_lb count_ph, by(country)
 
 qui do "${path2dos}\\Routines\\scores.do"
 
-save "${path2data}\\2. Scenarios\\qrq_country_averages_s0.dta", replace
+save "$path2data\\2. Scenarios\\qrq_country_averages_s0.dta", replace
+
+keep country count_cc count_cj count_lb count_ph
+egen total_counts=rowtotal(count_cc count_cj count_lb count_ph)
+
+save "$path2data\\2. Scenarios\\country_counts_s0.dta", replace
 
 restore
 
