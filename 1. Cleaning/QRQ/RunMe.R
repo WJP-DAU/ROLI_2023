@@ -92,9 +92,9 @@ qrq_scores_2022 <- load_scenario("1. Data/3. Final/qrq_country_averages_2022.dta
 qrq_scores_2023 <- load_scenario("1. Data/3. Final/qrq_country_averages_2023.dta", "scores_2023")
 
 qrq_scores_change <- qrq_scores_2023 %>%
-  left_join(qrq_scores_2024, by = c("country", "variables")) %>%
+  left_join(qrq_scores_2022, by = c("country", "variables")) %>%
   mutate(
-    scores_change     = scores_2024 - scores_2023,
+    scores_change     = scores_2023 - scores_2022,
     scores_direction  = if_else(scores_change > 0, "Positive", "Negative"),
     scores_big_change = if_else(abs(scores_change) > 0.05, "Yes", "No")
   )
@@ -117,12 +117,12 @@ qrq_stage1 <- compare_scenarios(
   score_a = "scores_s1",
   score_b = "scores_s2",
   direction_benchmark = "long_direction",
-  year_ref = "scores_2023",
+  year_ref = "scores_2022",
   scenario_labels = c("Scenario 1", "Scenario 2"),
   suffix = "stage1"
 ) %>%
   select(
-    country, variables, total_counts, scores_2023, scores_2024, scores_change,
+    country, variables, scores_2022, scores_2023, scores_change,
     scores_s3_n, scores_s3_p, scores_s4_n, scores_s4_p, long_direction,
     ends_with("stage1")
   )
@@ -133,8 +133,8 @@ qrq_stage1 <- compare_scenarios(
 qrq_stage2_input <- qrq_stage1 %>%
   rowwise() %>%
   mutate(
-    s3_change_p = scores_s3_p - scores_2023,
-    s3_change_n = scores_s3_n - scores_2023,
+    s3_change_p = scores_s3_p - scores_2022,
+    s3_change_n = scores_s3_n - scores_2022,
     s3_final = case_when(
       long_direction == "Positive" ~ scores_s3_n,
       long_direction == "Negative" ~ scores_s3_p,
@@ -142,8 +142,8 @@ qrq_stage2_input <- qrq_stage1 %>%
       min(c(s3_change_n, s3_change_p), na.rm = TRUE) == s3_change_p ~ scores_s3_p,
       TRUE ~ scores_s3_p
     ),
-    s4_change_p = scores_s4_p - scores_2023,
-    s4_change_n = scores_s4_n - scores_2023,
+    s4_change_p = scores_s4_p - scores_2022,
+    s4_change_n = scores_s4_n - scores_2022,
     s4_final = case_when(
       long_direction == "Positive" ~ scores_s4_n,
       long_direction == "Negative" ~ scores_s4_p,
@@ -159,13 +159,13 @@ qrq_stage2 <- compare_scenarios(
   score_a = "s3_final",
   score_b = "s4_final",
   direction_benchmark = "long_direction",
-  year_ref = "scores_2023",
+  year_ref = "scores_2022",
   scenario_labels = c("Scenario 3", "Scenario 4"),
   suffix = "stage2"
 ) %>%
   select(
     country, variables, long_direction, ends_with("stage1"),
-    ends_with("stage2"), scores_2023, scores_2024, scores_change, total_counts
+    ends_with("stage2"), scores_2022, scores_2023, scores_change
   )
 
 ### Stage 3: Compare stage 1 vs 2 --------------------------------------
@@ -189,7 +189,7 @@ qrq_final <- compare_stages(
 ) %>%
   select(
     country, variables, long_direction, ends_with("final"),
-    scores_2023, scores_2024, scores_change, total_counts, match_stage_a_b
+    scores_2022, scores_2023, scores_change, match_stage_a_b
   )
 
 # ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -198,15 +198,10 @@ qrq_final <- compare_stages(
 # ##
 # ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # options(scipen = 999)
-
+# 
 # qrq_scores_analysis <- qrq_final %>%
 #   mutate(
-#     diff_qrq = abs(scores_2024 - scores_final),
-#     level = case_when(
-#       total_counts < 41 ~ "Low counts",
-#       total_counts >= 41 & total_counts < 61 ~ "Medium counts",
-#       total_counts >= 61 ~ "High counts"
-#     )
+#     diff_qrq = abs(scores_2023 - scores_final)
 #   )
 # 
 # 
