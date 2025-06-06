@@ -60,6 +60,7 @@ global path2dos  "C:\Users\nrodriguez\OneDrive - World Justice Project\Natalia\G
 cls
 do "${path2dos23}\\Routines\\data_import_all.do"
 
+
 /*=================================================================================================================
 					II. Appending the data
 =================================================================================================================*/
@@ -196,88 +197,137 @@ save qrq.dta, replace
 cls 
 
 *----- Running the checks routine (2023 checks)
-do "${path2dos23}\\Routines\\check.do"
+do "${path2dos23}\\Routines\\checks.do"
 
 
-********************************************************
-				 /* 6. Outliers */
-********************************************************
+/*=================================================================================================================
+					VII. Factor scores
+=================================================================================================================*/
 
-*Total number of experts by country
-bysort country: gen N=_N
+qui do "${path2dos}/Routines/scores.do"
 
-*Total number of experts by country and discipline
-bysort country question: gen N_questionnaire=_N
 
-*Average score and standard deviation (for outliers)
-bysort country: egen total_score_mean=mean(total_score)
-bysort country: egen total_score_sd=sd(total_score)
+*----- Define global for norm variables
+qui do "${path2dos}\Routines\globals.do"
 
-*Define global for norm variables
-do "${path2dos}\\Routines\\globals.do"
+
+*----- Adding labels for variables
+qui do "${path2dos}\Routines\labels.do"
+
+
+/*=================================================================================================================
+					VIII. Expert checks (iteration)
+=================================================================================================================*/
 
 
 *----- Aggregate Scores - NO DELETIONS (scenario 0)
 
 preserve
 
-collapse (mean) $norm (sum) count_cc count_cj count_lb count_ph, by(country)
+collapse (mean) $norm (sum) count_cc count_cj count_lb count_ph count_cc_long count_cj_long count_lb_long count_ph_long, by(country)
 
-qui do "${path2dos}\\Routines\\scores.do"
+qui do "${path2dos}\Routines\scores.do"
 
-save "$path2data\\2. Scenarios\\qrq_country_averages_s0.dta", replace
+save "$path2data\2. Scenarios\Alternative\qrq_country_averages_s0.dta", replace
 
-keep country count_cc count_cj count_lb count_ph
+keep country count_cc count_cj count_lb count_ph count_cc_long count_cj_long count_lb_long count_ph_long
 egen total_counts=rowtotal(count_cc count_cj count_lb count_ph)
+egen total_counts_long=rowtotal(count_cc_long count_cj_long count_lb_long count_ph_long)
 
-save "$path2data\\2. Scenarios\\country_counts_s0.dta", replace
+save "$path2data\2. Scenarios\Alternative\country_counts_s0.dta", replace
 
 restore
 
 
-*----- Aggregate Scores - Removing general outliers (scenario 1)
+*----- Aggregate Scores - Removing general extreme outliers (scenario 1)
 
+
+***** POSITIVE OUTLIERS
 preserve
 
 *Outliers routine (scenario 1)
-qui do "${path2dos}\\Routines\outliers_gen.do"
+qui do "${path2dos}\Routines\outliers_gen.do"
 
 *Dropping general outliers
-drop if outlier==1 & N>20 & N_questionnaire>5
+drop if outlier_hi==1 & N>20 & N_questionnaire>5
 
 collapse (mean) $norm, by(country)
 
-qui do "${path2dos}\\Routines\scores.do"
+qui do "${path2dos}\Routines\scores.do"
 
-save "${path2data}\\2. Scenarios\qrq_country_averages_s1.dta", replace
+save "$path2data\2. Scenarios\Alternative\qrq_country_averages_s1_p.dta", replace
 
 restore
 
 
-*----- Aggregate Scores - Removing general outliers + outliers by discipline (highest/lowest) (scenario 2)
-
+***** NEGATIVE OUTLIERS
 preserve
 
 *Outliers routine (scenario 1)
-qui do "${path2dos}\\Routines\outliers_gen.do"
+qui do "${path2dos}\Routines\outliers_gen.do"
 
 *Dropping general outliers
-drop if outlier==1 & N>20 & N_questionnaire>5
+drop if outlier_lo==1 & N>20 & N_questionnaire>5
+
+collapse (mean) $norm, by(country)
+
+qui do "${path2dos}\Routines\scores.do"
+
+save "$path2data\2. Scenarios\Alternative\qrq_country_averages_s1_n.dta", replace
+
+restore
+
+
+*----- Aggregate Scores - outliers by discipline (highest/lowest) (scenario 2)
+
+***** POSITIVE OUTLIERS
+preserve
+
+*Outliers routine (scenario 1)
+qui do "${path2dos}\Routines\outliers_gen.do"
+
+*Dropping general outliers
+drop if outlier_hi==1 & N>20 & N_questionnaire>5
 
 *Outliers routine (scenario 2)
-qui do "${path2dos}\\Routines\outliers_dis.do"
+qui do "${path2dos}\Routines\outliers_dis.do"
 
 *Dropping outliers by disciplines (IQR)
 foreach x in cc cj lb ph {
 	drop if outlier_iqr_`x'_hi==1
+}
+
+collapse (mean) $norm, by(country)
+
+qui do "${path2dos}\Routines\scores.do"
+
+save "$path2data\2. Scenarios\Alternative\qrq_country_averages_s2_p.dta", replace
+
+restore
+
+
+***** NEGATIVE OUTLIERS
+preserve
+
+*Outliers routine (scenario 1)
+qui do "${path2dos}\Routines\outliers_gen.do"
+
+*Dropping general outliers
+drop if outlier_lo==1 & N>20 & N_questionnaire>5
+
+*Outliers routine (scenario 2)
+qui do "${path2dos}\Routines\outliers_dis.do"
+
+*Dropping outliers by disciplines (IQR)
+foreach x in cc cj lb ph {
 	drop if outlier_iqr_`x'_lo==1
 }
 
 collapse (mean) $norm, by(country)
 
-qui do "${path2dos}\\Routines\scores.do"
+qui do "${path2dos}\Routines\scores.do"
 
-save "${path2data}\\2. Scenarios\qrq_country_averages_s2.dta", replace
+save "$path2data\2. Scenarios\Alternative\qrq_country_averages_s2_n.dta", replace
 
 restore
 
@@ -289,28 +339,27 @@ restore
 preserve
 
 *Outliers routine (scenario 1)
-qui do "${path2dos}\\Routines\outliers_gen.do"
+qui do "${path2dos}\Routines\outliers_gen.do"
 
 *Dropping general outliers
-drop if outlier==1 & N>20 & N_questionnaire>5
+drop if outlier_hi==1 & N>20 & N_questionnaire>5
 
 *Outliers routine (scenario 2)
-qui do "${path2dos}\\Routines\outliers_dis.do"
+qui do "${path2dos}\Routines\outliers_dis.do"
 
 *Dropping outliers by disciplines (IQR)
 foreach x in cc cj lb ph {
 	drop if outlier_iqr_`x'_hi==1
-	drop if outlier_iqr_`x'_lo==1
 }
 
 *Outliers routine (scenario 3) - This routine defines the outliers by question
-qui do "${path2dos}\\Routines\outliers_ques.do"
+qui do "${path2dos}\Routines\outliers_ques.do"
 
 *This routine defines the globals for each sub-factor (all questions included in the sub-factor)
-qui do "${path2dos}\\Routines\subfactor_questions.do"
+qui do "${path2dos}\Routines\subfactor_questions.do"
 
 *Outliers routine (scenario 4) - This routine defines the sub-factor outliers 
-qui do "${path2dos}\\Routines\outliers_sub.do"
+qui do "${path2dos}\Routines\outliers_sub.do"
 
 *Dropping questions that are outliers (max-min values with a proportion of less than 15% only for the experts who have the extreme values in questions & sub-factor)
 foreach v in f_1_2 f_1_3 f_1_4 f_1_5 f_1_6 f_1_7 f_2_1 f_2_2 f_2_3 f_2_4 f_3_1 f_3_2 f_3_3 f_3_4 f_4_1 f_4_2 f_4_3 f_4_4 f_4_5 f_4_6 f_4_7 f_4_8 f_5_3 f_6_1 f_6_2 f_6_3 f_6_4 f_6_5 f_7_1 f_7_2 f_7_3 f_7_4 f_7_5 f_7_6 f_7_7 f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7 {
@@ -323,9 +372,9 @@ foreach v in f_1_2 f_1_3 f_1_4 f_1_5 f_1_6 f_1_7 f_2_1 f_2_2 f_2_3 f_2_4 f_3_1 f
 
 collapse (mean) $norm, by(country)
 
-qui do "${path2dos}\\Routines\scores.do"
+qui do "${path2dos}\Routines\scores.do"
 
-save "${path2data}\\2. Scenarios\qrq_country_averages_s3_p.dta", replace
+save "$path2data\2. Scenarios\Alternative\qrq_country_averages_s3_p.dta", replace
 
 restore
 
@@ -334,28 +383,27 @@ restore
 preserve
 
 *Outliers routine (scenario 1)
-qui do "${path2dos}\\Routines\outliers_gen.do"
+qui do "${path2dos}\Routines\outliers_gen.do"
 
 *Dropping general outliers
-drop if outlier==1 & N>20 & N_questionnaire>5
+drop if outlier_lo==1 & N>20 & N_questionnaire>5
 
 *Outliers routine (scenario 2)
-qui do "${path2dos}\\Routines\outliers_dis.do"
+qui do "${path2dos}\Routines\outliers_dis.do"
 
 *Dropping outliers by disciplines (IQR)
 foreach x in cc cj lb ph {
-	drop if outlier_iqr_`x'_hi==1
 	drop if outlier_iqr_`x'_lo==1
 }
 
 *Outliers routine (scenario 3) - This routine defines the outliers by question
-qui do "${path2dos}\\Routines\outliers_ques.do"
+qui do "${path2dos}\Routines\outliers_ques.do"
 
 *Outliers routine (scenario 4) - This routine defines the sub-factor outliers 
-qui do "${path2dos}\\Routines\outliers_sub.do"
+qui do "${path2dos}\Routines\outliers_sub.do"
 
 *This routine defines the globals for each sub-factor (all questions included in the sub-factor)
-qui do "${path2dos}\\Routines\subfactor_questions.do"
+qui do "${path2dos}\Routines\subfactor_questions.do"
 
 *Dropping questions that are outliers (max-min values with a proportion of less than 15% only for the experts who have the extreme values in questions & sub-factor)
 foreach v in f_1_2 f_1_3 f_1_4 f_1_5 f_1_6 f_1_7 f_2_1 f_2_2 f_2_3 f_2_4 f_3_1 f_3_2 f_3_3 f_3_4 f_4_1 f_4_2 f_4_3 f_4_4 f_4_5 f_4_6 f_4_7 f_4_8 f_5_3 f_6_1 f_6_2 f_6_3 f_6_4 f_6_5 f_7_1 f_7_2 f_7_3 f_7_4 f_7_5 f_7_6 f_7_7 f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7 {
@@ -369,85 +417,9 @@ foreach v in f_1_2 f_1_3 f_1_4 f_1_5 f_1_6 f_1_7 f_2_1 f_2_2 f_2_3 f_2_4 f_3_1 f
 
 collapse (mean) $norm, by(country)
 
-qui do "${path2dos}\\Routines\scores.do"
+qui do "${path2dos}\Routines\scores.do"
 
-save "${path2data}\\2. Scenarios\qrq_country_averages_s3_n.dta", replace
-
-restore
-
-
-*----- Aggregate Scores - Removing question outliers + general outliers + discipline outliers (scenario 3) ALTERNATIVE
-
-
-***** POSITIVE OUTLIERS
-preserve
-
-*Outliers routine (scenario 1)
-qui do "${path2dos}\\Routines\outliers_gen.do"
-
-*Dropping general outliers
-drop if outlier==1 & N>20 & N_questionnaire>5
-
-*Outliers routine (scenario 3) - This routine defines the outliers by question
-qui do "${path2dos}\\Routines\outliers_ques.do"
-
-*This routine defines the globals for each sub-factor (all questions included in the sub-factor)
-qui do "${path2dos}\\Routines\subfactor_questions.do"
-
-*Outliers routine (scenario 4) - This routine defines the sub-factor outliers 
-qui do "${path2dos}\\Routines\outliers_sub.do"
-
-*Dropping questions that are outliers (max-min values with a proportion of less than 15% only for the experts who have the extreme values in questions & sub-factor)
-foreach v in f_1_2 f_1_3 f_1_4 f_1_5 f_1_6 f_1_7 f_2_1 f_2_2 f_2_3 f_2_4 f_3_1 f_3_2 f_3_3 f_3_4 f_4_1 f_4_2 f_4_3 f_4_4 f_4_5 f_4_6 f_4_7 f_4_8 f_5_3 f_6_1 f_6_2 f_6_3 f_6_4 f_6_5 f_7_1 f_7_2 f_7_3 f_7_4 f_7_5 f_7_6 f_7_7 f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7 {
-	display as result "`v'"
-	foreach x of global `v' {
-		display as error "`x'" 
-		replace `x'=. if `x'==`x'_max & `x'_hi_p<0.15 & `x'_c>5 & `x'!=. & outlier_`v'_iqr_hi==1		
-}
-}
-
-collapse (mean) $norm, by(country)
-
-qui do "${path2dos}\\Routines\scores.do"
-
-save "${path2data}\\2. Scenarios\qrq_country_averages_s3_p_alt.dta", replace
-
-restore
-
-
-***** NEGATIVE OUTLIERS
-preserve
-
-*Outliers routine (scenario 1)
-qui do "${path2dos}\\Routines\outliers_gen.do"
-
-*Dropping general outliers
-drop if outlier==1 & N>20 & N_questionnaire>5
-
-*Outliers routine (scenario 3) - This routine defines the outliers by question
-qui do "${path2dos}\\Routines\outliers_ques.do"
-
-*Outliers routine (scenario 4) - This routine defines the sub-factor outliers 
-qui do "${path2dos}\\Routines\outliers_sub.do"
-
-*This routine defines the globals for each sub-factor (all questions included in the sub-factor)
-qui do "${path2dos}\\Routines\subfactor_questions.do"
-
-*Dropping questions that are outliers (max-min values with a proportion of less than 15% only for the experts who have the extreme values in questions & sub-factor)
-foreach v in f_1_2 f_1_3 f_1_4 f_1_5 f_1_6 f_1_7 f_2_1 f_2_2 f_2_3 f_2_4 f_3_1 f_3_2 f_3_3 f_3_4 f_4_1 f_4_2 f_4_3 f_4_4 f_4_5 f_4_6 f_4_7 f_4_8 f_5_3 f_6_1 f_6_2 f_6_3 f_6_4 f_6_5 f_7_1 f_7_2 f_7_3 f_7_4 f_7_5 f_7_6 f_7_7 f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7 {
-	display as result "`v'"
-	foreach x of global `v' {
-		display as error "`x'" 		
-		replace `x'=. if `x'==`x'_min & `x'_lo_p<0.15 & `x'_c>5 & `x'!=. & outlier_`v'_iqr_lo==1
-		
-}
-}
-
-collapse (mean) $norm, by(country)
-
-qui do "${path2dos}\\Routines\scores.do"
-
-save "${path2data}\\2. Scenarios\qrq_country_averages_s3_n_alt.dta", replace
+save "$path2data\2. Scenarios\Alternative\qrq_country_averages_s3_n.dta", replace
 
 restore
 
@@ -459,28 +431,27 @@ restore
 preserve
 
 *Outliers routine (scenario 1)
-qui do "${path2dos}\\Routines\outliers_gen.do"
+qui do "${path2dos}\Routines\outliers_gen.do"
 
 *Dropping general outliers
-drop if outlier==1 & N>20 & N_questionnaire>5
+drop if outlier_hi==1 & N>20 & N_questionnaire>5
 
 *Outliers routine (scenario 2)
-qui do "${path2dos}\\Routines\outliers_dis.do"
+qui do "${path2dos}\Routines\outliers_dis.do"
 
 *Dropping outliers by disciplines (IQR)
 foreach x in cc cj lb ph {
 	drop if outlier_iqr_`x'_hi==1
-	drop if outlier_iqr_`x'_lo==1
 }
 
 *Outliers routine (scenario 3) - This routine defines the outliers by question
-qui do "${path2dos}\\Routines\outliers_ques.do"
+qui do "${path2dos}\Routines\outliers_ques.do"
 
 *Outliers routine (scenario 4) - This routine defines the sub-factor outliers 
-qui do "${path2dos}\\Routines\outliers_sub.do"
+qui do "${path2dos}\Routines\outliers_sub.do"
 
 *This routine defines the globals for each sub-factor (all questions included in the sub-factor)
-qui do "${path2dos}\\Routines\subfactor_questions.do"
+qui do "${path2dos}\Routines\subfactor_questions.do"
 
 *Dropping ALL questions in sub-factor if the expert is an outlier for this indicator
 #delimit ;
@@ -504,9 +475,9 @@ f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7
 
 collapse (mean) $norm, by(country)
 
-qui do "${path2dos}\\Routines\scores.do"
+qui do "${path2dos}\Routines\scores.do"
 
-save "${path2data}\\2. Scenarios\qrq_country_averages_s4_p.dta", replace
+save "$path2data\2. Scenarios\Alternative\qrq_country_averages_s4_p.dta", replace
 
 restore
 
@@ -515,28 +486,27 @@ restore
 preserve
 
 *Outliers routine (scenario 1)
-qui do "${path2dos}\\Routines\outliers_gen.do"
+qui do "${path2dos}\Routines\outliers_gen.do"
 
 *Dropping general outliers
-drop if outlier==1 & N>20 & N_questionnaire>5
+drop if outlier_lo==1 & N>20 & N_questionnaire>5
 
 *Outliers routine (scenario 2)
-qui do "${path2dos}\\Routines\outliers_dis.do"
+qui do "${path2dos}\Routines\outliers_dis.do"
 
 *Dropping outliers by disciplines (IQR)
 foreach x in cc cj lb ph {
-	drop if outlier_iqr_`x'_hi==1
 	drop if outlier_iqr_`x'_lo==1
 }
 
 *Outliers routine (scenario 3) - This routine defines the outliers by question
-qui do "${path2dos}\\Routines\outliers_ques.do"
+qui do "${path2dos}\Routines\outliers_ques.do"
 
 *Outliers routine (scenario 4) - This routine defines the sub-factor outliers 
-qui do "${path2dos}\\Routines\outliers_sub.do"
+qui do "${path2dos}\Routines\outliers_sub.do"
 
 *This routine defines the globals for each sub-factor (all questions included in the sub-factor)
-qui do "${path2dos}\\Routines\subfactor_questions.do"
+qui do "${path2dos}\Routines\subfactor_questions.do"
 
 *Dropping ALL questions in sub-factor if the expert is an outlier for this indicator
 #delimit ;
@@ -560,108 +530,12 @@ f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7
 
 collapse (mean) $norm, by(country)
 
-qui do "${path2dos}\\Routines\scores.do"
+qui do "${path2dos}\Routines\scores.do"
 
-save "${path2data}\\2. Scenarios\qrq_country_averages_s4_n.dta", replace
-
-restore
-
-
-*----- Aggregate Scores - Removing sub-factor outliers + general outliers + discipline outliers (scenario 4) ALTERNATIVE
-
-
-***** POSITIVE OUTLIERS
-preserve
-
-*Outliers routine (scenario 1)
-qui do "${path2dos}\\Routines\outliers_gen.do"
-
-*Dropping general outliers
-drop if outlier==1 & N>20 & N_questionnaire>5
-
-*Outliers routine (scenario 3) - This routine defines the outliers by question
-qui do "${path2dos}\\Routines\outliers_ques.do"
-
-*Outliers routine (scenario 4) - This routine defines the sub-factor outliers 
-qui do "${path2dos}\\Routines\outliers_sub.do"
-
-*This routine defines the globals for each sub-factor (all questions included in the sub-factor)
-qui do "${path2dos}\\Routines\subfactor_questions.do"
-
-*Dropping ALL questions in sub-factor if the expert is an outlier for this indicator
-#delimit ;
-foreach v in 
-f_1_2 f_1_3 f_1_4 f_1_5 f_1_6 f_1_7 
-f_2_1 f_2_2 f_2_3 f_2_4
-f_3_1 f_3_2 f_3_3 f_3_4
-f_4_1 f_4_2 f_4_3 f_4_4 f_4_5 f_4_6 f_4_7 f_4_8
-f_5_3
-f_6_1 f_6_2 f_6_3 f_6_4 f_6_5
-f_7_1 f_7_2 f_7_3  f_7_4 f_7_5 f_7_6 f_7_7
-f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7
-{;
-	display as result "`v'"	;
-	foreach x of global `v' {;
-		display as error "`x'" ;
-		replace `x'=. if `x'_c>5 & `x'!=. & outlier_`v'_iqr_hi==1 ;	
-};
-};
-#delimit cr
-
-collapse (mean) $norm, by(country)
-
-qui do "${path2dos}\\Routines\scores.do"
-
-save "${path2data}\\2. Scenarios\qrq_country_averages_s4_p_alt.dta", replace
+save "$path2data\2. Scenarios\Alternative\qrq_country_averages_s4_n.dta", replace
 
 restore
 
-
-***** NEGATIVE OUTLIERS
-preserve
-
-*Outliers routine (scenario 1)
-qui do "${path2dos}\\Routines\outliers_gen.do"
-
-*Dropping general outliers
-drop if outlier==1 & N>20 & N_questionnaire>5
-
-*Outliers routine (scenario 3) - This routine defines the outliers by question
-qui do "${path2dos}\\Routines\outliers_ques.do"
-
-*Outliers routine (scenario 4) - This routine defines the sub-factor outliers 
-qui do "${path2dos}\\Routines\outliers_sub.do"
-
-*This routine defines the globals for each sub-factor (all questions included in the sub-factor)
-qui do "${path2dos}\\Routines\subfactor_questions.do"
-
-*Dropping ALL questions in sub-factor if the expert is an outlier for this indicator
-#delimit ;
-foreach v in 
-f_1_2 f_1_3 f_1_4 f_1_5 f_1_6 f_1_7 
-f_2_1 f_2_2 f_2_3 f_2_4
-f_3_1 f_3_2 f_3_3 f_3_4
-f_4_1 f_4_2 f_4_3 f_4_4 f_4_5 f_4_6 f_4_7 f_4_8
-f_5_3
-f_6_1 f_6_2 f_6_3 f_6_4 f_6_5
-f_7_1 f_7_2 f_7_3  f_7_4 f_7_5 f_7_6 f_7_7
-f_8_1 f_8_2 f_8_3 f_8_4 f_8_5 f_8_6 f_8_7
-{;
-	display as result "`v'"	;
-	foreach x of global `v' {;
-		display as error "`x'" ;
-		replace `x'=. if `x'_c>5 & `x'!=. & outlier_`v'_iqr_lo==1 ;	
-};
-};
-#delimit cr
-
-collapse (mean) $norm, by(country)
-
-qui do "${path2dos}\\Routines\scores.do"
-
-save "${path2data}\\2. Scenarios\qrq_country_averages_s4_n_alt.dta", replace
-
-restore
 
 
 /*=================================================================================================================
